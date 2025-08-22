@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "notistack";
 import { isAuthenticated, isAdmin } from "../utils/auth";
 import { API_BASE_URL } from "../config";
+import EnhancedDailyMealCustomizer from "./EnhancedDailyMealCustomizer";
+import CurryManagement from "./CurryManagement";
 
 const MenuManagement = () => {
   const navigate = useNavigate();
@@ -10,6 +12,7 @@ const MenuManagement = () => {
   
   // States for menu items
   const [menuItems, setMenuItems] = useState([]);
+  const [curries, setCurries] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // States for adding new food item
@@ -20,13 +23,17 @@ const MenuManagement = () => {
   
   // States for daily meal settings
   const [dailyMeals, setDailyMeals] = useState({
-    breakfast: [],
-    lunch: [],
-    dinner: []
+    breakfast: { foodItems: [], curries: [] },
+    lunch: { foodItems: [], curries: [] },
+    dinner: { foodItems: [], curries: [] }
   });
   
   // State for active tab
-  const [activeTab, setActiveTab] = useState("manage");
+  const [activeTab, setActiveTab] = useState("foodItems");
+  
+  // State for meal customizer
+  const [showCustomizer, setShowCustomizer] = useState(false);
+  const [currentMealType, setCurrentMealType] = useState(null);
 
   useEffect(() => {
     // Check if user is authenticated and is admin
@@ -43,6 +50,7 @@ const MenuManagement = () => {
     
     // Load food items from API
     fetchFoodItems();
+    fetchCurries();
   }, [navigate]);
 
   // Fetch food items from backend
@@ -65,6 +73,38 @@ const MenuManagement = () => {
       enqueueSnackbar("Error loading food items", { variant: "error" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch curries from backend
+  const fetchCurries = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/curries`, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched curries data:', data);
+        
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setCurries(data);
+        } else if (data && Array.isArray(data.curries)) {
+          setCurries(data.curries);
+        } else {
+          console.warn('Invalid curries data format:', data);
+          setCurries([]);
+        }
+      } else {
+        console.error("Failed to load curries");
+        setCurries([]);
+      }
+    } catch (error) {
+      console.error("Error fetching curries:", error);
+      setCurries([]);
     }
   };
 
@@ -184,18 +224,113 @@ const MenuManagement = () => {
   };
 
   // Handle removing item from daily meal
-  const handleRemoveFromDailyMeal = (mealType, foodId) => {
+  const handleRemoveFromDailyMeal = (mealType, itemId, itemType = 'foodItems') => {
     const updatedMeals = { ...dailyMeals };
-    updatedMeals[mealType] = updatedMeals[mealType].filter(id => id !== foodId);
+    
+    // Ensure the meal structure exists
+    if (!updatedMeals[mealType]) {
+      updatedMeals[mealType] = { foodItems: [], curries: [] };
+    }
+    if (!updatedMeals[mealType][itemType]) {
+      updatedMeals[mealType][itemType] = [];
+    }
+    
+    // Remove the item from the appropriate array
+    updatedMeals[mealType][itemType] = updatedMeals[mealType][itemType].filter(id => id !== itemId);
+    
     setDailyMeals(updatedMeals);
     localStorage.setItem("dailyMeals", JSON.stringify(updatedMeals));
     
-    const foodName = menuItems.find(item => (item._id || item.id) === foodId)?.name;
-    enqueueSnackbar(`${foodName} removed from today's ${mealType}`, { variant: "info" });
+    // Get item name for notification
+    let itemName = '';
+    if (itemType === 'foodItems') {
+      const food = menuItems.find(item => (item._id || item.id) === itemId);
+      itemName = food?.name || 'Food item';
+    } else if (itemType === 'curries') {
+      // You might need to fetch curry data or have it available in state
+      itemName = `Curry ${itemId}`;
+    }
+    
+    enqueueSnackbar(`${itemName} removed from today's ${mealType}`, { variant: "info" });
   };
 
   // Get food item by ID
   const getFoodById = (id) => menuItems.find(item => (item._id || item.id) === id);
+
+  // Get curry by ID
+  const getCurryById = (id) => {
+    if (!Array.isArray(curries)) {
+      console.warn('Curries is not an array:', curries);
+      return null;
+    }
+    return curries.find(curry => (curry._id || curry.id) === id);
+  };
+
+  // Handle opening meal customizer
+  const handleCustomizeMeal = (mealType) => {
+    setCurrentMealType(mealType);
+    setShowCustomizer(true);
+  };
+
+  // Handle saving meal customization
+  const handleSaveMealCustomization = async (mealData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/daily-meals`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          date: new Date().toISOString().split('T')[0],
+          ...mealData
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update local state properly - merge instead of replace
+        const updatedMeals = { ...dailyMeals };
+        
+        // Update each meal type in mealData
+        Object.keys(mealData).forEach(mealType => {
+          if (mealData[mealType]) {
+            // Ensure the meal structure exists
+            if (!updatedMeals[mealType]) {
+              updatedMeals[mealType] = { foodItems: [], curries: [] };
+            }
+            
+            // Merge the new data with existing data
+            updatedMeals[mealType] = {
+              foodItems: mealData[mealType].foodItems || updatedMeals[mealType].foodItems || [],
+              curries: mealData[mealType].curries || updatedMeals[mealType].curries || []
+            };
+          }
+        });
+        
+        setDailyMeals(updatedMeals);
+        localStorage.setItem("dailyMeals", JSON.stringify(updatedMeals));
+        
+        const mealType = Object.keys(mealData)[0];
+        enqueueSnackbar(`${mealType.charAt(0).toUpperCase() + mealType.slice(1)} menu updated successfully!`, { variant: "success" });
+        setShowCustomizer(false);
+        setCurrentMealType(null);
+      } else {
+        const data = await response.json();
+        enqueueSnackbar(data.message || "Failed to update meal", { variant: "error" });
+      }
+    } catch (error) {
+      console.error("Error saving meal customization:", error);
+      enqueueSnackbar("Error updating meal", { variant: "error" });
+    }
+  };
+
+  // Handle closing meal customizer
+  const handleCloseCustomizer = () => {
+    setShowCustomizer(false);
+    setCurrentMealType(null);
+  };
 
   const handleGoBack = () => {
     navigate("/admin");
@@ -231,31 +366,41 @@ const MenuManagement = () => {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               <button
-                onClick={() => setActiveTab("manage")}
+                onClick={() => setActiveTab("foodItems")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "manage"
+                  activeTab === "foodItems"
                     ? "border-indigo-500 text-indigo-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                Manage Menu Items
+                🍽️ Food Items
               </button>
               <button
-                onClick={() => setActiveTab("daily")}
+                onClick={() => setActiveTab("curries")}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "daily"
+                  activeTab === "curries"
                     ? "border-indigo-500 text-indigo-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                Daily Meal Settings
+                🍛 Curries
+              </button>
+              <button
+                onClick={() => setActiveTab("dailyMeals")}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "dailyMeals"
+                    ? "border-indigo-500 text-indigo-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                📅 Daily Meal Settings
               </button>
             </nav>
           </div>
         </div>
 
-        {/* Manage Menu Items Tab */}
-        {activeTab === "manage" && (
+        {/* Food Items Tab */}
+        {activeTab === "foodItems" && (
           <div className="space-y-6">
             {/* Add New Food Form */}
             <div className="bg-white shadow rounded-lg p-6">
@@ -403,53 +548,81 @@ const MenuManagement = () => {
         )}
 
         {/* Daily Meal Settings Tab */}
-        {activeTab === "daily" && (
+        {/* Curries Tab */}
+        {activeTab === "curries" && (
+          <CurryManagement />
+        )}
+
+        {/* Daily Meals Tab */}
+        {activeTab === "dailyMeals" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Breakfast */}
               <div className="bg-white shadow rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">🌅 Today's Breakfast</h3>
-                  <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                    {dailyMeals.breakfast.length} items
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      {(dailyMeals.breakfast?.foodItems?.length || 0) + (dailyMeals.breakfast?.curries?.length || 0)} items
+                    </span>
+                    <button
+                      onClick={() => handleCustomizeMeal('breakfast')}
+                      className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                      Customize
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Current breakfast items */}
                 <div className="space-y-2 mb-4">
-                  {dailyMeals.breakfast.map(foodId => {
+                  {/* Food Items */}
+                  {dailyMeals.breakfast?.foodItems?.map(foodId => {
                     const food = getFoodById(foodId);
                     return food ? (
-                      <div key={foodId} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                        <span className="text-sm">{food.name} - Rs. {Number(food.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+                      <div key={`food-${foodId}`} className="flex justify-between items-center bg-yellow-50 p-3 rounded border border-yellow-200">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">🍽️ {food.name}</div>
+                          <div className="text-xs text-gray-500">LKR {Number(food.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</div>
+                        </div>
                         <button
-                          onClick={() => handleRemoveFromDailyMeal('breakfast', foodId)}
-                          className="text-red-600 hover:text-red-800 text-xs"
+                          onClick={() => handleRemoveFromDailyMeal('breakfast', foodId, 'foodItems')}
+                          className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded hover:bg-red-50"
                         >
                           Remove
                         </button>
                       </div>
                     ) : null;
                   })}
-                  {dailyMeals.breakfast.length === 0 && (
-                    <p className="text-gray-500 text-sm">No items set for breakfast</p>
+                  
+                  {/* Curries */}
+                  {dailyMeals.breakfast?.curries?.map(curryId => {
+                    const curry = getCurryById(curryId);
+                    return curry ? (
+                      <div key={`curry-${curryId}`} className="flex justify-between items-center bg-orange-50 p-3 rounded border border-orange-200">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">🍛 {curry.name}</div>
+                          <div className="text-xs text-gray-500">ID: {curry.customId}</div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFromDailyMeal('breakfast', curryId, 'curries')}
+                          className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : null;
+                  })}
+                  
+                  {(!dailyMeals.breakfast?.foodItems?.length && !dailyMeals.breakfast?.curries?.length) && (
+                    <div className="text-center py-8 text-gray-500">
+                      <svg className="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      <p className="text-sm">No items set for breakfast</p>
+                      <p className="text-xs">Click "Customize" to add items</p>
+                    </div>
                   )}
-                </div>
-                
-                {/* Add items */}
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Add items:</p>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {menuItems.filter(item => item.available && !dailyMeals.breakfast.includes(item._id || item.id)).map(item => (
-                      <button
-                        key={item._id || item.id}
-                        onClick={() => handleAddToDailyMeal('breakfast', item._id || item.id)}
-                        className="w-full text-left text-xs p-2 hover:bg-gray-100 rounded"
-                      >
-                        {item.name} - Rs. {Number(item.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
 
@@ -457,46 +630,68 @@ const MenuManagement = () => {
               <div className="bg-white shadow rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">☀️ Today's Lunch</h3>
-                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                    {dailyMeals.lunch.length} items
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      {(dailyMeals.lunch?.foodItems?.length || 0) + (dailyMeals.lunch?.curries?.length || 0)} items
+                    </span>
+                    <button
+                      onClick={() => handleCustomizeMeal('lunch')}
+                      className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                      Customize
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Current lunch items */}
                 <div className="space-y-2 mb-4">
-                  {dailyMeals.lunch.map(foodId => {
+                  {/* Food Items */}
+                  {dailyMeals.lunch?.foodItems?.map(foodId => {
                     const food = getFoodById(foodId);
                     return food ? (
-                      <div key={foodId} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                        <span className="text-sm">{food.name} - Rs. {Number(food.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+                      <div key={`food-${foodId}`} className="flex justify-between items-center bg-blue-50 p-3 rounded border border-blue-200">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">🍽️ {food.name}</div>
+                          <div className="text-xs text-gray-500">LKR {Number(food.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</div>
+                        </div>
                         <button
-                          onClick={() => handleRemoveFromDailyMeal('lunch', foodId)}
-                          className="text-red-600 hover:text-red-800 text-xs"
+                          onClick={() => handleRemoveFromDailyMeal('lunch', foodId, 'foodItems')}
+                          className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded hover:bg-red-50"
                         >
                           Remove
                         </button>
                       </div>
                     ) : null;
                   })}
-                  {dailyMeals.lunch.length === 0 && (
-                    <p className="text-gray-500 text-sm">No items set for lunch</p>
+                  
+                  {/* Curries */}
+                  {dailyMeals.lunch?.curries?.map(curryId => {
+                    const curry = getCurryById(curryId);
+                    return curry ? (
+                      <div key={`curry-${curryId}`} className="flex justify-between items-center bg-orange-50 p-3 rounded border border-orange-200">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">🍛 {curry.name}</div>
+                          <div className="text-xs text-gray-500">ID: {curry.customId}</div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFromDailyMeal('lunch', curryId, 'curries')}
+                          className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : null;
+                  })}
+                  
+                  {(!dailyMeals.lunch?.foodItems?.length && !dailyMeals.lunch?.curries?.length) && (
+                    <div className="text-center py-8 text-gray-500">
+                      <svg className="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      <p className="text-sm">No items set for lunch</p>
+                      <p className="text-xs">Click "Customize" to add items</p>
+                    </div>
                   )}
-                </div>
-                
-                {/* Add items */}
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Add items:</p>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {menuItems.filter(item => item.available && !dailyMeals.lunch.includes(item._id || item.id)).map(item => (
-                      <button
-                        key={item._id || item.id}
-                        onClick={() => handleAddToDailyMeal('lunch', item._id || item.id)}
-                        className="w-full text-left text-xs p-2 hover:bg-gray-100 rounded"
-                      >
-                        {item.name} - Rs. {Number(item.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
 
@@ -504,52 +699,89 @@ const MenuManagement = () => {
               <div className="bg-white shadow rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">🌙 Today's Dinner</h3>
-                  <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                    {dailyMeals.dinner.length} items
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      {(dailyMeals.dinner?.foodItems?.length || 0) + (dailyMeals.dinner?.curries?.length || 0)} items
+                    </span>
+                    <button
+                      onClick={() => handleCustomizeMeal('dinner')}
+                      className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                      Customize
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Current dinner items */}
                 <div className="space-y-2 mb-4">
-                  {dailyMeals.dinner.map(foodId => {
+                  {/* Food Items */}
+                  {dailyMeals.dinner?.foodItems?.map(foodId => {
                     const food = getFoodById(foodId);
                     return food ? (
-                      <div key={foodId} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                        <span className="text-sm">{food.name} - Rs. {Number(food.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+                      <div key={`food-${foodId}`} className="flex justify-between items-center bg-purple-50 p-3 rounded border border-purple-200">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">🍽️ {food.name}</div>
+                          <div className="text-xs text-gray-500">LKR {Number(food.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</div>
+                        </div>
                         <button
-                          onClick={() => handleRemoveFromDailyMeal('dinner', foodId)}
-                          className="text-red-600 hover:text-red-800 text-xs"
+                          onClick={() => handleRemoveFromDailyMeal('dinner', foodId, 'foodItems')}
+                          className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded hover:bg-red-50"
                         >
                           Remove
                         </button>
                       </div>
                     ) : null;
                   })}
-                  {dailyMeals.dinner.length === 0 && (
-                    <p className="text-gray-500 text-sm">No items set for dinner</p>
+                  
+                  {/* Curries */}
+                  {dailyMeals.dinner?.curries?.map(curryId => {
+                    const curry = getCurryById(curryId);
+                    return curry ? (
+                      <div key={`curry-${curryId}`} className="flex justify-between items-center bg-orange-50 p-3 rounded border border-orange-200">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">🍛 {curry.name}</div>
+                          <div className="text-xs text-gray-500">ID: {curry.customId}</div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFromDailyMeal('dinner', curryId, 'curries')}
+                          className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : null;
+                  })}
+                  
+                  {(!dailyMeals.dinner?.foodItems?.length && !dailyMeals.dinner?.curries?.length) && (
+                    <div className="text-center py-8 text-gray-500">
+                      <svg className="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      <p className="text-sm">No items set for dinner</p>
+                      <p className="text-xs">Click "Customize" to add items</p>
+                    </div>
                   )}
-                </div>
-                
-                {/* Add items */}
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Add items:</p>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {menuItems.filter(item => item.available && !dailyMeals.dinner.includes(item._id || item.id)).map(item => (
-                      <button
-                        key={item._id || item.id}
-                        onClick={() => handleAddToDailyMeal('dinner', item._id || item.id)}
-                        className="w-full text-left text-xs p-2 hover:bg-gray-100 rounded"
-                      >
-                        {item.name} - Rs. {Number(item.price).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Daily Meal Customizer Modal */}
+      {showCustomizer && currentMealType && (
+        <EnhancedDailyMealCustomizer
+          mealType={currentMealType}
+          mealTitle={currentMealType.charAt(0).toUpperCase() + currentMealType.slice(1)}
+          mealIcon={
+            currentMealType === 'breakfast' ? '🌅' :
+            currentMealType === 'lunch' ? '☀️' : '🌙'
+          }
+          currentMealData={dailyMeals[currentMealType]}
+          onClose={handleCloseCustomizer}
+          onSave={handleSaveMealCustomization}
+        />
+      )}
     </div>
   );
 };
