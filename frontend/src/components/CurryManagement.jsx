@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { PlusIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
 
-const CurryManagement = () => {
+const CurryManagement = ({ onRefresh }) => {
   const [curries, setCurries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -19,6 +19,7 @@ const CurryManagement = () => {
 
   const fetchCurries = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
       
       const response = await fetch("http://localhost:5000/api/curries", {
@@ -33,6 +34,11 @@ const CurryManagement = () => {
 
       const data = await response.json();
       setCurries(data.curries || []); // Fallback to empty array
+      
+      // Call parent refresh callback if provided
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       setError("Failed to fetch curries");
       setCurries([]); // Set to empty array on error
@@ -183,12 +189,26 @@ const CurryManagement = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Curry Management
-        </h1>
-        <p className="text-gray-600">
-          Manage curry items for your canteen menu
-        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Curry Management
+            </h1>
+            <p className="text-gray-600">
+              Manage curry items for your canteen menu
+            </p>
+          </div>
+          <button
+            onClick={fetchCurries}
+            disabled={loading}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {/* Messages */}

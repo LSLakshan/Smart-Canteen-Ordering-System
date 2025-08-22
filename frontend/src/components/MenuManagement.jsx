@@ -332,6 +332,32 @@ const MenuManagement = () => {
     setCurrentMealType(null);
   };
 
+  // Refresh functions
+  const handleRefreshFoodItems = async () => {
+    setLoading(true);
+    await fetchFoodItems();
+    enqueueSnackbar("Food items refreshed", { variant: "success" });
+  };
+
+  const handleRefreshCurries = async () => {
+    await fetchCurries();
+    enqueueSnackbar("Curries refreshed", { variant: "success" });
+  };
+
+  const handleRefreshDailyMeals = () => {
+    const savedMeals = localStorage.getItem("dailyMeals");
+    if (savedMeals) {
+      setDailyMeals(JSON.parse(savedMeals));
+    } else {
+      setDailyMeals({
+        breakfast: { foodItems: [], curries: [] },
+        lunch: { foodItems: [], curries: [] },
+        dinner: { foodItems: [], curries: [] }
+      });
+    }
+    enqueueSnackbar("Daily meals refreshed", { variant: "success" });
+  };
+
   const handleGoBack = () => {
     navigate("/admin");
   };
@@ -449,7 +475,19 @@ const MenuManagement = () => {
 
             {/* Menu Items List */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Current Menu Items</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Current Menu Items</h3>
+                <button
+                  onClick={handleRefreshFoodItems}
+                  disabled={loading}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {loading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
               {loading ? (
                 <div className="flex justify-center items-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -550,12 +588,42 @@ const MenuManagement = () => {
         {/* Daily Meal Settings Tab */}
         {/* Curries Tab */}
         {activeTab === "curries" && (
-          <CurryManagement />
+          <div className="space-y-6">
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">🍛 Curry Management</h3>
+                <button
+                  onClick={handleRefreshCurries}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              <CurryManagement onRefresh={handleRefreshCurries} />
+            </div>
+          </div>
         )}
 
         {/* Daily Meals Tab */}
         {activeTab === "dailyMeals" && (
           <div className="space-y-6">
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">📅 Daily Meal Settings</h3>
+                <button
+                  onClick={handleRefreshDailyMeals}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Breakfast */}
               <div className="bg-white shadow rounded-lg p-6">
