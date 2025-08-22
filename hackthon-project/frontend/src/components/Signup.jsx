@@ -27,7 +27,9 @@ const Signup = () => {
       return false;
     }
     if (formData.password.length < 6) {
-      enqueueSnackbar("Password must be at least 6 characters long", { variant: "error" });
+      enqueueSnackbar("Password must be at least 6 characters long", {
+        variant: "error",
+      });
       return false;
     }
     return true;
@@ -61,7 +63,9 @@ const Signup = () => {
       if (response.ok) {
         // Store token in localStorage
         localStorage.setItem("token", data.token);
-        enqueueSnackbar("Account created successfully!", { variant: "success" });
+        enqueueSnackbar("Account created successfully!", {
+          variant: "success",
+        });
         // Redirect to dashboard or home page
         navigate("/dashboard");
       } else {
