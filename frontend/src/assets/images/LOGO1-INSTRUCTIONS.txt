@@ -1,0 +1,30 @@
+# LOGO1.JPG INSTRUCTIONS
+
+## To add your logo1.jpg file:
+
+### Step 1: Prepare Your Logo
+- Make sure your logo file is in JPG format
+- Rename it to exactly "logo1.jpg" (lowercase)
+- Recommended specifications:
+  * Size: 200x200 pixels or larger
+  * Aspect ratio: Square (1:1) works best
+  * File size: Keep under 500KB for fast loading
+  * Quality: High quality for crisp display
+
+### Step 2: Add the File
+1. Copy your "logo1.jpg" file
+2. Paste it into this folder: `frontend/src/assets/images/`
+3. Replace this instruction file when you add the actual logo
+
+### Step 3: The Code is Ready!
+- The Login component is already updated to use logo1.jpg
+- No additional code changes needed
+- The logo will display as 80x80 pixels with rounded corners
+
+### Current Status:
+❌ logo1.jpg file is missing - please add your actual JPG logo file
+✅ Code is updated and ready to use the JPG logo
+
+### Note:
+- If you want to use a different filename, update the import in Login.jsx:
+  `import logo from "../assets/images/your-logo-name.jpg";`

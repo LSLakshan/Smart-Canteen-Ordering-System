@@ -8,12 +8,47 @@ import { SnackbarProvider } from "notistack";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Dashboard from "./components/Dashboard";
+import AdminDashboard from "./components/AdminDashboard";
+import FoodOrdering from "./components/FoodOrdering";
+import MenuManagement from "./components/MenuManagement";
+import { isAuthenticated, getUserRole } from "./utils/auth";
 import "./App.css";
 
-// Protected Route component
-const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/login" />;
+// Protected Route component with role-based redirection
+const ProtectedRoute = ({ children, requiredRole = null }) => {
+  const authenticated = isAuthenticated();
+  const userRole = getUserRole();
+
+  if (!authenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  // If a specific role is required and user doesn't have it, redirect based on their actual role
+  if (requiredRole && userRole !== requiredRole) {
+    if (userRole === 'admin') {
+      return <Navigate to="/admin" />;
+    } else {
+      return <Navigate to="/food-ordering" />;
+    }
+  }
+
+  return children;
+};
+
+// Route component that redirects based on user role
+const RoleBasedRedirect = () => {
+  const authenticated = isAuthenticated();
+  const userRole = getUserRole();
+
+  if (!authenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (userRole === 'admin') {
+    return <Navigate to="/admin" />;
+  } else {
+    return <Navigate to="/food-ordering" />;
+  }
 };
 
 function App() {
@@ -29,11 +64,49 @@ function App() {
       <Router>
         <div className="App">
           <Routes>
-            <Route path="/" element={<Navigate to="/login" />} />
+            {/* Public Routes */}
+            <Route path="/" element={<RoleBasedRedirect />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            
+            {/* Protected Routes */}
             <Route
               path="/dashboard"
+              element={<RoleBasedRedirect />}
+            />
+            
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/admin/menu-management"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <MenuManagement />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* User Routes */}
+            <Route
+              path="/food-ordering"
+              element={
+                <ProtectedRoute requiredRole="user">
+                  <FoodOrdering />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Fallback for old dashboard route */}
+            <Route
+              path="/old-dashboard"
               element={
                 <ProtectedRoute>
                   <Dashboard />

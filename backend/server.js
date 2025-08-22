@@ -17,6 +17,7 @@ mongoose
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/food-items", require("./routes/foodItems"));
 
 app.get("/", (req, res) => {
   res.send("Server is running and connected to MongoDB!");

@@ -1,0 +1,8 @@
+/* This is a placeholder for logo.png - Replace this with an actual PNG file */
+/* You can add your actual logo.png file here */
+/* The file should be approximately 120x120 pixels or larger for best quality */
+
+/* To add a real PNG logo:
+1. Get your logo file (logo.png)
+2. Replace this placeholder file with your actual PNG logo
+3. Make sure the file is named "logo.png" */

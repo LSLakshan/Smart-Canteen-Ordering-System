@@ -24,7 +24,7 @@ router.post("/signup", async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user._id, role: user.role },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "7d" }
     );
@@ -36,6 +36,7 @@ router.post("/signup", async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -63,7 +64,7 @@ router.post("/login", async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user._id, role: user.role },
       process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "7d" }
     );
@@ -75,6 +76,7 @@ router.post("/login", async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (error) {

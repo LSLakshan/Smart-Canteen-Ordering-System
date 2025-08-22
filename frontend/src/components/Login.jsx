@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSnackbar } from "notistack";
 import { API_BASE_URL } from "../config";
+import logo from "../assets/images/logo1.jpg";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -36,8 +37,15 @@ const Login = () => {
 
       if (response.ok) {
         localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
         enqueueSnackbar("Login successful!", { variant: "success" });
-        navigate("/dashboard");
+        
+        // Redirect based on user role
+        if (data.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/food-ordering");
+        }
       } else {
         enqueueSnackbar(data.message || "Login failed", { variant: "error" });
       }
@@ -54,22 +62,15 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="p-8 transition-all duration-300 bg-white border border-gray-100 shadow-xl rounded-2xl hover:shadow-2xl">
           <div className="mb-8 text-center">
-            <div className="flex items-center justify-center mx-auto mb-4 shadow-lg h-14 w-14 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8 text-white"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <div className="flex items-center justify-center mx-auto mb-4">
+              <img 
+                src={logo} 
+                alt="Smart Canteen Logo" 
+                className="h-20 w-20 object-contain rounded-lg"
+              />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-            <p className="mt-2 text-gray-600">Sign in to your account</p>
+            <p className="mt-2 text-gray-600">Sign in to your Smart Canteen account</p>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>

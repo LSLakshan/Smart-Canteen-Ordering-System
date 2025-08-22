@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSnackbar } from "notistack";
 import { API_BASE_URL } from "../config";
+import logo from "../assets/images/logo1.jpg";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -61,13 +62,19 @@ const Signup = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token in localStorage
+        // Store token and user data in localStorage
         localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
         enqueueSnackbar("Account created successfully!", {
           variant: "success",
         });
-        // Redirect to dashboard or home page
-        navigate("/dashboard");
+        
+        // Redirect based on user role (new users default to 'user' role)
+        if (data.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/food-ordering");
+        }
       } else {
         enqueueSnackbar(data.message || "Signup failed", { variant: "error" });
       }
@@ -84,18 +91,15 @@ const Signup = () => {
       <div className="w-full max-w-md">
         <div className="p-8 transition-all duration-300 bg-white border border-gray-100 shadow-xl rounded-2xl hover:shadow-2xl">
           <div className="mb-8 text-center">
-            <div className="flex items-center justify-center mx-auto mb-4 shadow-lg h-14 w-14 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8 text-white"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-              </svg>
+            <div className="flex items-center justify-center mx-auto mb-4">
+              <img 
+                src={logo} 
+                alt="Smart Canteen Logo" 
+                className="h-20 w-20 object-contain rounded-lg"
+              />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Create account</h2>
-            <p className="mt-2 text-gray-600">Sign up to get started</p>
+            <p className="mt-2 text-gray-600">Join Smart Canteen today</p>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
