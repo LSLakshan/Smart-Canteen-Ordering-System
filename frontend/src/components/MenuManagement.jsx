@@ -585,7 +585,6 @@ const MenuManagement = () => {
           </div>
         )}
 
-        {/* Daily Meal Settings Tab */}
         {/* Curries Tab */}
         {activeTab === "curries" && (
           <CurryManagement onRefresh={handleRefreshCurries} />
