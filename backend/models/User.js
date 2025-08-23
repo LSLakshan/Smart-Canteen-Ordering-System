@@ -20,6 +20,12 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 6,
     },
+    indexNo: {
+      type: String,
+      required: true,
+      match: /^TG\d{4}$/,
+      trim: true,
+    },
     role: {
       type: String,
       enum: ["user", "admin"],

@@ -39,12 +39,12 @@ const Login = () => {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         enqueueSnackbar("Login successful!", { variant: "success" });
-        
+
         // Redirect based on user role
         if (data.user.role === "admin") {
           navigate("/admin");
         } else {
-          navigate("/food-ordering");
+          navigate("/home");
         }
       } else {
         enqueueSnackbar(data.message || "Login failed", { variant: "error" });
@@ -63,14 +63,16 @@ const Login = () => {
         <div className="p-8 transition-all duration-300 bg-white border border-gray-100 shadow-xl rounded-2xl hover:shadow-2xl">
           <div className="mb-8 text-center">
             <div className="flex items-center justify-center mx-auto mb-4">
-              <img 
-                src={logo} 
-                alt="Smart Canteen Logo" 
+              <img
+                src={logo}
+                alt="Smart Canteen Logo"
                 className="h-20 w-20 object-contain rounded-lg"
               />
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
-            <p className="mt-2 text-gray-600">Sign in to your Smart Canteen account</p>
+            <p className="mt-2 text-gray-600">
+              Sign in to your Smart Canteen account
+            </p>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>

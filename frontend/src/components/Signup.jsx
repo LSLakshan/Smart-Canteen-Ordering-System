@@ -8,6 +8,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    indexNo: "",
     password: "",
     confirmPassword: "",
   });
@@ -29,6 +30,12 @@ const Signup = () => {
     }
     if (formData.password.length < 6) {
       enqueueSnackbar("Password must be at least 6 characters long", {
+        variant: "error",
+      });
+      return false;
+    }
+    if (!/^TG\d{4}$/.test(formData.indexNo)) {
+      enqueueSnackbar("Index No must be in format TGxxxx (e.g., TG1013)", {
         variant: "error",
       });
       return false;
@@ -55,6 +62,7 @@ const Signup = () => {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          indexNo: formData.indexNo,
           password: formData.password,
         }),
       });
@@ -68,12 +76,12 @@ const Signup = () => {
         enqueueSnackbar("Account created successfully!", {
           variant: "success",
         });
-        
+
         // Redirect based on user role (new users default to 'user' role)
         if (data.user.role === "admin") {
           navigate("/admin");
         } else {
-          navigate("/food-ordering");
+          navigate("/home");
         }
       } else {
         enqueueSnackbar(data.message || "Signup failed", { variant: "error" });
@@ -92,9 +100,9 @@ const Signup = () => {
         <div className="p-8 transition-all duration-300 bg-white border border-gray-100 shadow-xl rounded-2xl hover:shadow-2xl">
           <div className="mb-8 text-center">
             <div className="flex items-center justify-center mx-auto mb-4">
-              <img 
-                src={logo} 
-                alt="Smart Canteen Logo" 
+              <img
+                src={logo}
+                alt="Smart Canteen Logo"
                 className="h-20 w-20 object-contain rounded-lg"
               />
             </div>
@@ -104,6 +112,25 @@ const Signup = () => {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="indexNo"
+                  className="block mb-1 text-sm font-medium text-left text-gray-700"
+                >
+                  Index No
+                </label>
+                <input
+                  id="indexNo"
+                  name="indexNo"
+                  type="text"
+                  autoComplete="off"
+                  required
+                  className="w-full px-4 py-3 transition duration-300 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="e.g., TG1013"
+                  value={formData.indexNo}
+                  onChange={handleChange}
+                />
+              </div>
               <div>
                 <label
                   htmlFor="name"
