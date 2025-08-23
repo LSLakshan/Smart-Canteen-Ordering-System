@@ -25,10 +25,10 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
   // If a specific role is required and user doesn't have it, redirect based on their actual role
   if (requiredRole && userRole !== requiredRole) {
-    if (userRole === 'admin') {
+    if (userRole === "admin") {
       return <Navigate to="/admin" />;
     } else {
-      return <Navigate to="/food-ordering" />;
+      return <Navigate to="/home" />;
     }
   }
 
@@ -44,12 +44,18 @@ const RoleBasedRedirect = () => {
     return <Navigate to="/login" />;
   }
 
-  if (userRole === 'admin') {
+  if (userRole === "admin") {
     return <Navigate to="/admin" />;
   } else {
-    return <Navigate to="/food-ordering" />;
+    return <Navigate to="/home" />;
   }
 };
+
+import Home from "./components/Home";
+import Breakfast from "./components/Breakfast";
+import Lunch from "./components/Lunch";
+import Dinner from "./components/Dinner";
+import OrdersManagement from "./components/OrdersManagement";
 
 function App() {
   return (
@@ -68,13 +74,10 @@ function App() {
             <Route path="/" element={<RoleBasedRedirect />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            
+
             {/* Protected Routes */}
-            <Route
-              path="/dashboard"
-              element={<RoleBasedRedirect />}
-            />
-            
+            <Route path="/dashboard" element={<RoleBasedRedirect />} />
+
             {/* Admin Routes */}
             <Route
               path="/admin"
@@ -84,7 +87,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
             <Route
               path="/admin/menu-management"
               element={
@@ -93,8 +95,48 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
+            <Route
+              path="/admin/orders"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <OrdersManagement />
+                </ProtectedRoute>
+              }
+            />
+
             {/* User Routes */}
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute requiredRole="user">
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/breakfast"
+              element={
+                <ProtectedRoute requiredRole="user">
+                  <Breakfast />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lunch"
+              element={
+                <ProtectedRoute requiredRole="user">
+                  <Lunch />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dinner"
+              element={
+                <ProtectedRoute requiredRole="user">
+                  <Dinner />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/food-ordering"
               element={
