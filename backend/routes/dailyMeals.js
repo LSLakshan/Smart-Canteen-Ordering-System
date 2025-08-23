@@ -1,7 +1,6 @@
 const express = require("express");
 const DailyMeal = require("../models/DailyMeal");
 const FoodItem = require("../models/FoodItem");
-const Curry = require("../models/Curry");
 const auth = require("../middleware/auth");
 
 const router = express.Router();
@@ -27,20 +26,17 @@ router.get("/", async (req, res) => {
       },
       isActive: true
     })
-    .populate('breakfast.foodItems', 'name price available')
-    .populate('breakfast.curries', 'name price spiceLevel type available')
-    .populate('lunch.foodItems', 'name price available')
-    .populate('lunch.curries', 'name price spiceLevel type available')
-    .populate('dinner.foodItems', 'name price available')
-    .populate('dinner.curries', 'name price spiceLevel type available')
+    .populate('breakfast', 'name price available')
+    .populate('lunch', 'name price available')
+    .populate('dinner', 'name price available')
     .populate('createdBy', 'name email');
     
     if (!dailyMeal) {
       return res.json({
         date: queryDate,
-        breakfast: { foodItems: [], curries: [] },
-        lunch: { foodItems: [], curries: [] },
-        dinner: { foodItems: [], curries: [] },
+        breakfast: [],
+        lunch: [],
+        dinner: [],
         exists: false
       });
     }
@@ -87,33 +83,17 @@ router.post("/", auth, async (req, res) => {
       return validItems.map(item => item._id);
     };
     
-    // Validate curry IDs
-    const validateCurries = async (curryIds) => {
-      if (!curryIds || curryIds.length === 0) return [];
-      
-      const validCurries = await Curry.find({
-        _id: { $in: curryIds },
-        available: true
-      });
-      
-      return validCurries.map(curry => curry._id);
-    };
-    
-    // Validate meals structure
-    const validBreakfast = {
-      foodItems: await validateFoodItems(breakfast?.foodItems || []),
-      curries: await validateCurries(breakfast?.curries || [])
-    };
-    
-    const validLunch = {
-      foodItems: await validateFoodItems(lunch?.foodItems || []),
-      curries: await validateCurries(lunch?.curries || [])
-    };
-    
-    const validDinner = {
-      foodItems: await validateFoodItems(dinner?.foodItems || []),
-      curries: await validateCurries(dinner?.curries || [])
-    };
+    // Validate meals structure - only validate provided meals
+    const validatedMeals = {};
+    if (breakfast !== undefined) {
+      validatedMeals.breakfast = await validateFoodItems(breakfast);
+    }
+    if (lunch !== undefined) {
+      validatedMeals.lunch = await validateFoodItems(lunch);
+    }
+    if (dinner !== undefined) {
+      validatedMeals.dinner = await validateFoodItems(dinner);
+    }
     
     // Check if daily meal already exists for this date
     let dailyMeal = await DailyMeal.findOne({
@@ -125,18 +105,24 @@ router.post("/", auth, async (req, res) => {
     });
     
     if (dailyMeal) {
-      // Update existing daily meal
-      dailyMeal.breakfast = validBreakfast;
-      dailyMeal.lunch = validLunch;
-      dailyMeal.dinner = validDinner;
+      // Update existing daily meal - only update provided meals
+      if (validatedMeals.breakfast !== undefined) {
+        dailyMeal.breakfast = validatedMeals.breakfast;
+      }
+      if (validatedMeals.lunch !== undefined) {
+        dailyMeal.lunch = validatedMeals.lunch;
+      }
+      if (validatedMeals.dinner !== undefined) {
+        dailyMeal.dinner = validatedMeals.dinner;
+      }
       dailyMeal.createdBy = req.userId;
     } else {
-      // Create new daily meal
+      // Create new daily meal with default empty arrays for non-provided meals
       dailyMeal = new DailyMeal({
         date: mealDate,
-        breakfast: validBreakfast,
-        lunch: validLunch,
-        dinner: validDinner,
+        breakfast: validatedMeals.breakfast || [],
+        lunch: validatedMeals.lunch || [],
+        dinner: validatedMeals.dinner || [],
         createdBy: req.userId,
       });
     }
@@ -144,12 +130,9 @@ router.post("/", auth, async (req, res) => {
     await dailyMeal.save();
     
     // Populate the response
-    await dailyMeal.populate('breakfast.foodItems', 'name price available');
-    await dailyMeal.populate('breakfast.curries', 'name price spiceLevel type available');
-    await dailyMeal.populate('lunch.foodItems', 'name price available');
-    await dailyMeal.populate('lunch.curries', 'name price spiceLevel type available');
-    await dailyMeal.populate('dinner.foodItems', 'name price available');
-    await dailyMeal.populate('dinner.curries', 'name price spiceLevel type available');
+    await dailyMeal.populate('breakfast', 'name price available');
+    await dailyMeal.populate('lunch', 'name price available');
+    await dailyMeal.populate('dinner', 'name price available');
     await dailyMeal.populate('createdBy', 'name email');
     
     res.json({
@@ -203,12 +186,9 @@ router.get("/history", auth, async (req, res) => {
     const skip = (page - 1) * limit;
     
     const dailyMeals = await DailyMeal.find({ isActive: true })
-      .populate('breakfast.foodItems', 'name price')
-      .populate('breakfast.curries', 'name price spiceLevel type')
-      .populate('lunch.foodItems', 'name price')
-      .populate('lunch.curries', 'name price spiceLevel type')
-      .populate('dinner.foodItems', 'name price')
-      .populate('dinner.curries', 'name price spiceLevel type')
+      .populate('breakfast', 'name price')
+      .populate('lunch', 'name price')
+      .populate('dinner', 'name price')
       .populate('createdBy', 'name email')
       .sort({ date: -1 })
       .skip(skip)

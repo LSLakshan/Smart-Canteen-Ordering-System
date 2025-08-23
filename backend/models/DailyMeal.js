@@ -7,36 +7,18 @@ const dailyMealSchema = new mongoose.Schema(
       required: true,
       default: Date.now,
     },
-    breakfast: {
-      foodItems: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "FoodItem",
-      }],
-      curries: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Curry",
-      }],
-    },
-    lunch: {
-      foodItems: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "FoodItem",
-      }],
-      curries: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Curry",
-      }],
-    },
-    dinner: {
-      foodItems: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "FoodItem",
-      }],
-      curries: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Curry",
-      }],
-    },
+    breakfast: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FoodItem",
+    }],
+    lunch: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FoodItem",
+    }],
+    dinner: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FoodItem",
+    }],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

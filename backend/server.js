@@ -18,7 +18,6 @@ mongoose
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/food-items", require("./routes/foodItems"));
-app.use("/api/curries", require("./routes/curries"));
 app.use("/api/daily-meals", require("./routes/dailyMeals"));
 
 app.get("/", (req, res) => {

@@ -6,18 +6,15 @@ const EnhancedDailyMealCustomizer = ({
   mealType, 
   mealTitle, 
   mealIcon, 
-  currentMealData = { foodItems: [], curries: [] },
+  currentMealData = [],
   onClose, 
   onSave 
 }) => {
   const { enqueueSnackbar } = useSnackbar();
   const [foodItems, setFoodItems] = useState([]);
-  const [curries, setCurries] = useState([]);
-  const [selectedFoodItems, setSelectedFoodItems] = useState(currentMealData.foodItems || []);
-  const [selectedCurries, setSelectedCurries] = useState(currentMealData.curries || []);
+  const [selectedFoodItems, setSelectedFoodItems] = useState(currentMealData || []);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState("foodItems");
 
   useEffect(() => {
     fetchData();
@@ -25,48 +22,23 @@ const EnhancedDailyMealCustomizer = ({
 
   useEffect(() => {
     // Update selections when currentMealData changes
-    setSelectedFoodItems(currentMealData.foodItems || []);
-    setSelectedCurries(currentMealData.curries || []);
+    setSelectedFoodItems(currentMealData || []);
   }, [currentMealData]);
 
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
       
-      // Fetch food items and curries in parallel
-      const [foodResponse, curryResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/food-items?available=true`, {
-          headers: { "Authorization": `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/api/curries?available=true`, {
-          headers: { "Authorization": `Bearer ${token}` },
-        })
-      ]);
+      // Fetch food items
+      const foodResponse = await fetch(`${API_BASE_URL}/api/food-items?available=true`, {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
       
       if (foodResponse.ok) {
         const foodData = await foodResponse.json();
         setFoodItems(foodData);
       } else {
         enqueueSnackbar("Failed to load food items", { variant: "error" });
-      }
-
-      if (curryResponse.ok) {
-        const curryData = await curryResponse.json();
-        console.log('Curry data received:', curryData);
-        
-        // Handle different response formats
-        if (Array.isArray(curryData)) {
-          setCurries(curryData);
-        } else if (curryData && Array.isArray(curryData.curries)) {
-          setCurries(curryData.curries);
-        } else {
-          console.warn('Invalid curry data format:', curryData);
-          setCurries([]);
-        }
-      } else {
-        console.error("Failed to load curries");
-        setCurries([]);
-        enqueueSnackbar("Failed to load curries", { variant: "error" });
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -86,16 +58,6 @@ const EnhancedDailyMealCustomizer = ({
     });
   };
 
-  const handleCurryToggle = (curryId) => {
-    setSelectedCurries(prev => {
-      if (prev.includes(curryId)) {
-        return prev.filter(id => id !== curryId);
-      } else {
-        return [...prev, curryId];
-      }
-    });
-  };
-
   const handleSelectAllFoodItems = () => {
     if (selectedFoodItems.length === foodItems.length) {
       setSelectedFoodItems([]);
@@ -104,27 +66,16 @@ const EnhancedDailyMealCustomizer = ({
     }
   };
 
-  const handleSelectAllCurries = () => {
-    if (selectedCurries.length === curries.length) {
-      setSelectedCurries([]);
-    } else {
-      setSelectedCurries(curries.map(curry => curry._id));
-    }
-  };
-
   const handleSave = async () => {
-    if (selectedFoodItems.length === 0 && selectedCurries.length === 0) {
-      enqueueSnackbar("Please select at least one food item or curry", { variant: "warning" });
+    if (selectedFoodItems.length === 0) {
+      enqueueSnackbar("Please select at least one food item", { variant: "warning" });
       return;
     }
 
     setSaving(true);
     try {
       const mealData = {
-        [mealType]: {
-          foodItems: selectedFoodItems,
-          curries: selectedCurries
-        }
+        [mealType]: selectedFoodItems
       };
 
       await onSave(mealData);
@@ -171,41 +122,16 @@ const EnhancedDailyMealCustomizer = ({
             </button>
           </div>
 
-          {/* Section Tabs */}
-          <div className="mb-6">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setActiveSection("foodItems")}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeSection === "foodItems"
-                      ? "border-indigo-500 text-indigo-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  🍽️ Food Items ({selectedFoodItems.length} selected)
-                </button>
-                <button
-                  onClick={() => setActiveSection("curries")}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeSection === "curries"
-                      ? "border-indigo-500 text-indigo-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  🍛 Curries ({selectedCurries.length} selected)
-                </button>
-              </nav>
-            </div>
-          </div>
-
           {/* Food Items Section */}
-          {activeSection === "foodItems" && (
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-semibold text-gray-800">
-                  Select Food Items for {mealTitle}
-                </h4>
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-semibold text-gray-800">
+                Select Food Items for {mealTitle}
+              </h4>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">
+                  {selectedFoodItems.length} selected
+                </span>
                 <button
                   onClick={handleSelectAllFoodItems}
                   className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
@@ -213,6 +139,7 @@ const EnhancedDailyMealCustomizer = ({
                   {selectedFoodItems.length === foodItems.length ? "Deselect All" : "Select All"}
                 </button>
               </div>
+            </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-4 border border-gray-200 rounded-lg">
                 {foodItems.map((item) => (
@@ -252,75 +179,14 @@ const EnhancedDailyMealCustomizer = ({
                 </div>
               )}
             </div>
-          )}
-
-          {/* Curries Section */}
-          {activeSection === "curries" && (
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-semibold text-gray-800">
-                  Select Curries for {mealTitle}
-                </h4>
-                <button
-                  onClick={handleSelectAllCurries}
-                  className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
-                >
-                  {selectedCurries.length === curries.length ? "Deselect All" : "Select All"}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto p-4 border border-gray-200 rounded-lg">
-                {curries.map((curry) => (
-                  <div
-                    key={curry._id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      selectedCurries.includes(curry._id)
-                        ? "border-orange-500 bg-orange-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => handleCurryToggle(curry._id)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg">🍛</span>
-                          <h5 className="font-medium text-gray-900">{curry.name}</h5>
-                        </div>
-                        
-                        <p className="text-xs text-gray-500 mt-1">
-                          ID: {curry.customId}
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={selectedCurries.includes(curry._id)}
-                        onChange={() => handleCurryToggle(curry._id)}
-                        className="h-5 w-5 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {curries.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No curries available
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Summary */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <h5 className="font-medium text-gray-900 mb-2">Selection Summary</h5>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="text-sm">
               <div>
                 <span className="font-medium">Food Items:</span>
                 <span className="ml-2 text-indigo-600">{selectedFoodItems.length} selected</span>
-              </div>
-              <div>
-                <span className="font-medium">Curries:</span>
-                <span className="ml-2 text-orange-600">{selectedCurries.length} selected</span>
               </div>
             </div>
           </div>
@@ -336,7 +202,7 @@ const EnhancedDailyMealCustomizer = ({
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || (selectedFoodItems.length === 0 && selectedCurries.length === 0)}
+              disabled={saving || selectedFoodItems.length === 0}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-2 px-6 rounded transition-colors flex items-center"
             >
               {saving ? (
